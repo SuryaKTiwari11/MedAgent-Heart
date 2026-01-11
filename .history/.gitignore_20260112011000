@@ -1,9 +1,0 @@
-.vscode
-.env
-node_modules
-*.pdf
-.venv
-__pycache__
-mlruns
-D:\MedAgent-Heart\.history
-history
