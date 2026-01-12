@@ -4,6 +4,15 @@ node_modules
 *.pdf
 .venv
 venv/
-__pycache__
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
 mlruns
 .history
