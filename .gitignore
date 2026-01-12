@@ -3,6 +3,7 @@
 node_modules
 *.pdf
 .venv
+venv/
 __pycache__
 mlruns
 .history
