@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv() # Load environment variables from .env file
+load_dotenv() 
 
 # Pinecone
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
