@@ -1,7 +1,7 @@
 [project]
-name = "agent-rag01"
-version = "0.1.0"
-description = "Add your description here" #ask claude
+name = "medagent-heart"
+version = "1.0.0"
+description = "AI-powered cardiac health information system with RAG, built using LangGraph, Groq LLM, Pinecone vector database, and Streamlit UI"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
