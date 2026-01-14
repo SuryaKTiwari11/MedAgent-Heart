@@ -99,7 +99,7 @@ async def upload_document(file: UploadFile = File(...)):
     """
     Uploads a PDF document, extracts text, and adds it to the RAG knowledge base.
     """
-    if not file.filename.endswith(".pdf"):
+    if not file.filename or not file.filename.endswith(".pdf"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only PDF files are supported.",
@@ -129,7 +129,7 @@ async def upload_document(file: UploadFile = File(...)):
 
         return DocumentUploadResponse(
             message=f"PDF '{file.filename}' successfully uploaded and indexed.",
-            filename=file.filename,
+            filename=file.filename or "unknown.pdf",  # type: ignore
             processed_chunks=total_chunks_added,
         )
     except Exception as e:
@@ -163,13 +163,14 @@ async def chat_with_agent(request: QueryRequest):
         inputs = {"messages": [HumanMessage(content=request.query)]}
 
         final_message = ""
+        s = None  # Initialize to avoid unbound variable
 
         print(f"--- Starting Agent Stream for session {request.session_id} ---")
         print(
             f"Web Search Enabled: {request.enable_web_search}"
         )  # For server-side debugging
 
-        for i, s in enumerate(rag_agent.stream(inputs, config=config)):
+        for i, s in enumerate(rag_agent.stream(inputs, config=config)):  # type: ignore
             current_node_name = None
             node_output_state = None
 
@@ -264,7 +265,7 @@ async def chat_with_agent(request: QueryRequest):
         if final_actual_state_dict and "messages" in final_actual_state_dict:
             for msg in reversed(final_actual_state_dict["messages"]):
                 if isinstance(msg, AIMessage):
-                    final_message = msg.content
+                    final_message = str(msg.content)  # Ensure string type
                     break
 
         if not final_message:
