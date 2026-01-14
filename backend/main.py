@@ -41,6 +41,22 @@ app.add_middleware(
 memory = MemorySaver()
 
 
+# Startup event to pre-load heavy models AFTER server is listening
+@app.on_event("startup")
+async def startup_event():
+    """Pre-load models in background after server starts accepting connections."""
+    print("✓ Server started and listening on port")
+    print("→ Background: Pre-loading embedding models...")
+    # This triggers lazy initialization but doesn't block port binding
+    try:
+        from vectorstore import _get_embeddings
+
+        _get_embeddings()
+        print("✓ Embedding models loaded")
+    except Exception as e:
+        print(f"⚠ Warning: Could not pre-load embeddings: {e}")
+
+
 # --- Pydantic Models for API ---
 class TraceEvent(BaseModel):
     step: int
@@ -285,7 +301,8 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    """Health check endpoint for Render port detection."""
+    return {"status": "ok", "port": PORT, "timestamp": time.time()}
 
 
 # Entry point for running locally or on Render
