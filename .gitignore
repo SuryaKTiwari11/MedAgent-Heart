@@ -17,4 +17,38 @@ build/
 mlruns
 .history
 DEPLOYMENT.md
-/.devcontainer 
+/.devcontainer
+
+# Test files (don't commit to production)
+backend/test_*.py
+**/test_minimal.py
+backend/main_minimal.py
+backend/*_minimal.py
+
+# Docker files (not used in production)
+backend/Dockerfile
+backend/.dockerignore
+.dockerignore
+Dockerfile
+
+# Documentation
+DOCKER_RENDER_CONFIG.md
+RENDER_DEPLOYMENT_CHECKLIST.md
+
+# Log files
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+temp/
+tmp/ 
