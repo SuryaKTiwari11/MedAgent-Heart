@@ -12,8 +12,8 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_community.document_loaders import PyPDFLoader
 
-
-from agent import rag_agent
+# Lazy import - only import when needed to avoid startup failures
+# from agent import rag_agent
 from vectorstore import add_document_to_vectorstore
 from config import ALLOWED_ORIGINS
 
@@ -23,6 +23,9 @@ app = FastAPI(
     description="API for the LangGraph-powered RAG agent with Pinecone and Groq.",
     version="1.0.0",
 )
+
+# Get port from environment (Render sets this)
+PORT = int(os.environ.get("PORT", 8000))
 
 # Configure CORS for frontend access
 # This allows your Streamlit frontend to communicate with the backend
@@ -122,6 +125,9 @@ async def chat_with_agent(request: QueryRequest):
     trace_events_for_frontend: List[TraceEvent] = []
 
     try:
+        # Lazy import to avoid initialization errors at startup
+        from agent import rag_agent
+        
         # Pass enable_web_search into the config for the agent to access
         config = {
             "configurable": {
@@ -282,8 +288,8 @@ async def health_check():
     return {"status": "ok"}
 
 
-# Entry point for running locally
+# Entry point for running locally or on Render
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
