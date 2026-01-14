@@ -28,6 +28,10 @@ def _get_embeddings():
     """Lazy initialization of embeddings."""
     global _embeddings
     if _embeddings is None:
+        # Encourage Hugging Face to cache inside Render writable path
+        os.environ.setdefault("HF_HOME", "/opt/render/project/.cache/huggingface")
+        os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
+        os.environ.setdefault("HF_HUB_HTTP_TIMEOUT", "30")
         _embeddings = HuggingFaceEmbeddings(
             model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
