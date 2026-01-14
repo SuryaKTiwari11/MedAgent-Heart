@@ -5,6 +5,12 @@ import time
 from typing import List, Dict, Any
 import tempfile
 
+print("=" * 60)
+print("🚀 STARTING BACKEND SERVICE")
+print(f"📍 PORT environment variable: {os.environ.get('PORT', 'NOT SET')}")
+print(f"🌐 Will bind to: 0.0.0.0:{os.environ.get('PORT', 8000)}")
+print("=" * 60)
+
 from fastapi import FastAPI, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -12,10 +18,14 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_community.document_loaders import PyPDFLoader
 
+print("✓ Core imports successful")
+
 # Lazy import - only import when needed to avoid startup failures
 # from agent import rag_agent
 from vectorstore import add_document_to_vectorstore
 from config import ALLOWED_ORIGINS
+
+print("✓ Config and vectorstore imports successful")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -45,16 +55,20 @@ memory = MemorySaver()
 @app.on_event("startup")
 async def startup_event():
     """Pre-load models in background after server starts accepting connections."""
-    print("✓ Server started and listening on port")
+    print("=" * 60)
+    print("✅ SERVER IS LISTENING AND READY")
+    print(f"🔗 Port {PORT} is now bound and accepting connections")
+    print("=" * 60)
     print("→ Background: Pre-loading embedding models...")
     # This triggers lazy initialization but doesn't block port binding
     try:
         from vectorstore import _get_embeddings
 
         _get_embeddings()
-        print("✓ Embedding models loaded")
+        print("✓ Embedding models loaded successfully")
     except Exception as e:
         print(f"⚠ Warning: Could not pre-load embeddings: {e}")
+        print("⚠ This is OK - embeddings will load on first use")
 
 
 # --- Pydantic Models for API ---

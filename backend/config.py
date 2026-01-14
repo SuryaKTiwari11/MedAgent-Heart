@@ -1,7 +1,11 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env only if it exists (won't crash if missing on Render)
+try:
+    load_dotenv()
+except Exception:
+    pass
 
 # Pinecone
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
