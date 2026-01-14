@@ -49,7 +49,7 @@ MedAgent-Heart is an intelligent RAG (Retrieval Augmented Generation) chatbot th
 ### Prerequisites
 
 - Python 3.10 or higher
-- Conda (recommended) or virtualenv
+- VS Code with integrated terminal
 - API Keys for:
   - [Groq](https://console.groq.com/) - LLM inference
   - [Pinecone](https://www.pinecone.io/) - Vector database
@@ -64,20 +64,15 @@ MedAgent-Heart is an intelligent RAG (Retrieval Augmented Generation) chatbot th
    cd MedAgent-Heart
    ```
 
-2. **Create and activate conda environment**
+2. **Install dependencies**
 
-   ```bash
-   conda create -n medagent python=3.11 -y
-   conda activate medagent
-   ```
-
-3. **Install dependencies**
+   Open VS Code terminal and run:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure environment variables**
+3. **Configure environment variables**
 
    Create a `.env` file in the `backend/` directory:
 
@@ -93,36 +88,19 @@ MedAgent-Heart is an intelligent RAG (Retrieval Augmented Generation) chatbot th
 
 ### Running the Application
 
-#### Option 1: Using Separate Terminals (Recommended)
+Open two VS Code terminals and run the following:
 
 **Terminal 1 - Backend Server:**
 
 ```bash
 cd backend
-conda activate medagent
 python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Terminal 2 - Frontend Server:**
 
 ```bash
-conda activate medagent
 streamlit run frontend/app.py
-```
-
-#### Option 2: Using Full Python Path (Windows)
-
-**Backend:**
-
-```bash
-cd backend
-D:\anaconda3\envs\medagent\python.exe -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-**Frontend:**
-
-```bash
-D:\anaconda3\envs\medagent\python.exe -m streamlit run frontend\app.py
 ```
 
 ### Accessing the Application

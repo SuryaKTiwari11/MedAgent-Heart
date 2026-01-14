@@ -9,6 +9,7 @@ docx2txt
 unstructured
 fastapi
 uvicorn
+python-multipart
 streamlit
 python-dotenv
 pinecone 
