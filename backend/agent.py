@@ -12,13 +12,27 @@ from langchain_core.runnables import RunnableConfig
 from config import GROQ_API_KEY, TAVILY_API_KEY
 from vectorstore import get_retriever
 
-os.environ["TAVILY_API_KEY"] = TAVILY_API_KEY
-tavily = TavilySearch(max_results=3, topic="general")
+# Set environment variables
+if TAVILY_API_KEY:
+    os.environ["TAVILY_API_KEY"] = TAVILY_API_KEY
+if GROQ_API_KEY:
+    os.environ["GROQ_API_KEY"] = GROQ_API_KEY
+
+# Initialize Tavily only if API key is present
+tavily = None
+if TAVILY_API_KEY:
+    try:
+        tavily = TavilySearch(max_results=3, topic="general")
+    except Exception as e:
+        print(f"Warning: Could not initialize Tavily: {e}")
 
 
 @tool
 def web_search_tool(query: str) -> str:
     """Up-to-date web info via Tavily"""
+    global tavily
+    if tavily is None:
+        return "WEB_ERROR::Tavily API not configured"
     try:
         result = tavily.invoke({"query": query})
         if isinstance(result, dict) and "results" in result:
@@ -64,15 +78,20 @@ class RagJudge(BaseModel):
     )
 
 
-os.environ["GROQ_API_KEY"] = GROQ_API_KEY
-
-router_llm = ChatGroq(
-    model="llama-3.3-70b-versatile", temperature=0
-).with_structured_output(RouteDecision)
-judge_llm = ChatGroq(
-    model="llama-3.3-70b-versatile", temperature=0
-).with_structured_output(RagJudge)
-answer_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
+# Initialize LLM models with error handling
+try:
+    router_llm = ChatGroq(
+        model="llama-3.3-70b-versatile", temperature=0
+    ).with_structured_output(RouteDecision)
+    judge_llm = ChatGroq(
+        model="llama-3.3-70b-versatile", temperature=0
+    ).with_structured_output(RagJudge)
+    answer_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
+except Exception as e:
+    print(f"Warning: Could not initialize Groq models: {e}")
+    router_llm = None
+    judge_llm = None
+    answer_llm = None
 
 
 class AgentState(TypedDict, total=False):

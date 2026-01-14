@@ -24,5 +24,5 @@ DOC_SOURCE_DIR = os.getenv("DOC_SOURCE_DIR", "data")
 # Add your deployed frontend URLs here
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:8501,http://localhost:3000,https://*.streamlit.app",
+    "http://localhost:8501,http://localhost:3000,https://cardiogpt.streamlit.app",
 ).split(",")
