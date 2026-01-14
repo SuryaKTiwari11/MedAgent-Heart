@@ -22,10 +22,11 @@ print("✓ Core imports successful")
 
 # Lazy import - only import when needed to avoid startup failures
 # from agent import rag_agent
-from vectorstore import add_document_to_vectorstore
+# Defer vectorstore import to avoid any HuggingFace downloads during startup
+# from vectorstore import add_document_to_vectorstore
 from config import ALLOWED_ORIGINS
 
-print("✓ Config and vectorstore imports successful")
+print("✓ Config imports successful (vectorstore deferred)")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -114,6 +115,9 @@ async def upload_document(file: UploadFile = File(...)):
     )
 
     try:
+        # Lazy import to avoid HuggingFace downloads during server startup
+        from vectorstore import add_document_to_vectorstore
+
         loader = PyPDFLoader(temp_file_path)
         documents = loader.load()
 

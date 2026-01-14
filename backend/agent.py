@@ -10,7 +10,9 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import RunnableConfig
 
 from config import GROQ_API_KEY, TAVILY_API_KEY
-from vectorstore import get_retriever
+
+# Defer vectorstore import to avoid HuggingFace downloads at module load
+# from vectorstore import get_retriever
 
 # Set environment variables
 if TAVILY_API_KEY:
@@ -18,19 +20,71 @@ if TAVILY_API_KEY:
 if GROQ_API_KEY:
     os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 
-# Initialize Tavily only if API key is present
-tavily = None
-if TAVILY_API_KEY:
-    try:
-        tavily = TavilySearch(max_results=3, topic="general")
-    except Exception as e:
-        print(f"Warning: Could not initialize Tavily: {e}")
+# Lazy initialization - models loaded on first use, not at import time
+_tavily = None
+_router_llm = None
+_judge_llm = None
+_answer_llm = None
+
+
+def _get_tavily():
+    """Lazy initialization of Tavily search."""
+    global _tavily
+    if _tavily is None:
+        if not TAVILY_API_KEY:
+            return None
+        try:
+            _tavily = TavilySearch(max_results=3, topic="general")
+        except Exception as e:
+            print(f"Warning: Could not initialize Tavily: {e}")
+            return None
+    return _tavily
+
+
+def _get_router_llm():
+    """Lazy initialization of router LLM."""
+    global _router_llm
+    if _router_llm is None:
+        try:
+            _router_llm = ChatGroq(
+                model="llama-3.3-70b-versatile", temperature=0
+            ).with_structured_output(RouteDecision)
+        except Exception as e:
+            print(f"Warning: Could not initialize router LLM: {e}")
+            raise
+    return _router_llm
+
+
+def _get_judge_llm():
+    """Lazy initialization of judge LLM."""
+    global _judge_llm
+    if _judge_llm is None:
+        try:
+            _judge_llm = ChatGroq(
+                model="llama-3.3-70b-versatile", temperature=0
+            ).with_structured_output(RagJudge)
+        except Exception as e:
+            print(f"Warning: Could not initialize judge LLM: {e}")
+            raise
+    return _judge_llm
+
+
+def _get_answer_llm():
+    """Lazy initialization of answer LLM."""
+    global _answer_llm
+    if _answer_llm is None:
+        try:
+            _answer_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
+        except Exception as e:
+            print(f"Warning: Could not initialize answer LLM: {e}")
+            raise
+    return _answer_llm
 
 
 @tool
 def web_search_tool(query: str) -> str:
     """Up-to-date web info via Tavily"""
-    global tavily
+    tavily = _get_tavily()
     if tavily is None:
         return "WEB_ERROR::Tavily API not configured"
     try:
@@ -59,6 +113,9 @@ def web_search_tool(query: str) -> str:
 def rag_search_tool(query: str) -> str:
     """Top-K chunks from KB (empty string if none)"""
     try:
+        # Lazy import to avoid HuggingFace downloads at startup
+        from vectorstore import get_retriever
+
         retriever_instance = get_retriever()
         docs = retriever_instance.invoke(query, k=5)
         return "\n\n".join(d.page_content for d in docs) if docs else ""
@@ -78,33 +135,24 @@ class RagJudge(BaseModel):
     )
 
 
-# Initialize LLM models with error handling
-try:
-    router_llm = ChatGroq(
-        model="llama-3.3-70b-versatile", temperature=0
-    ).with_structured_output(RouteDecision)
-    judge_llm = ChatGroq(
-        model="llama-3.3-70b-versatile", temperature=0
-    ).with_structured_output(RagJudge)
-    answer_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
-except Exception as e:
-    print(f"Warning: Could not initialize Groq models: {e}")
-    router_llm = None
-    judge_llm = None
-    answer_llm = None
-
-
 class AgentState(TypedDict, total=False):
     messages: List[BaseMessage]
     route: Literal["rag", "web", "answer", "end"]
     rag: str
     web: str
     web_search_enabled: bool
+    initial_router_decision: str
+    router_override_reason: str
 
 
 def router_node(state: AgentState, config: RunnableConfig) -> AgentState:
+    router_llm = _get_router_llm()
     query = next(
-        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
+        (
+            m.content
+            for m in reversed(state.get("messages", []))
+            if isinstance(m, HumanMessage)
+        ),
         "",
     )
     web_search_enabled = config.get("configurable", {}).get("web_search_enabled", True)
@@ -147,7 +195,7 @@ def router_node(state: AgentState, config: RunnableConfig) -> AgentState:
 
     messages = [("system", system_prompt), ("user", query)]
 
-    result: RouteDecision = router_llm.invoke(messages)
+    result: RouteDecision = router_llm.invoke(messages)  # type: ignore
 
     initial_router_decision = result.route
     router_override_reason = None
@@ -157,7 +205,7 @@ def router_node(state: AgentState, config: RunnableConfig) -> AgentState:
         router_override_reason = "Web search disabled by user; redirected to RAG."
 
     out = {
-        "messages": state["messages"],
+        "messages": state.get("messages", []),
         "route": result.route,
         "web_search_enabled": web_search_enabled,
     }
@@ -166,20 +214,25 @@ def router_node(state: AgentState, config: RunnableConfig) -> AgentState:
         out["router_override_reason"] = router_override_reason
 
     if result.route == "end":
-        out["messages"] = state["messages"] + [
+        out["messages"] = state.get("messages", []) + [
             AIMessage(content=result.reply or "Hello!")
         ]
 
-    return out
+    return out  # type: ignore
 
 
 def rag_node(state: AgentState, config: RunnableConfig) -> AgentState:
+    judge_llm = _get_judge_llm()
     query = next(
-        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
+        (
+            m.content
+            for m in reversed(state.get("messages", []))
+            if isinstance(m, HumanMessage)
+        ),
         "",
     )
     web_search_enabled = config.get("configurable", {}).get("web_search_enabled", True)
-    chunks = rag_search_tool.invoke(query)
+    chunks = rag_search_tool.invoke(query)  # type: ignore
 
     if chunks.startswith("RAG_ERROR::"):
         next_route = "web" if web_search_enabled else "answer"
@@ -206,7 +259,7 @@ def rag_node(state: AgentState, config: RunnableConfig) -> AgentState:
             f"Question: {query}\n\nRetrieved info: {chunks}\n\nIs this sufficient to answer the question?",
         ),
     ]
-    verdict: RagJudge = judge_llm.invoke(judge_messages)
+    verdict: RagJudge = judge_llm.invoke(judge_messages)  # type: ignore
 
     if verdict.sufficient:
         next_route = "answer"
@@ -224,7 +277,11 @@ def rag_node(state: AgentState, config: RunnableConfig) -> AgentState:
 def web_node(state: AgentState, config: RunnableConfig) -> AgentState:
     print("\n--- Entering web_node ---")
     query = next(
-        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
+        (
+            m.content
+            for m in reversed(state.get("messages", []))
+            if isinstance(m, HumanMessage)
+        ),
         "",
     )
 
@@ -242,7 +299,7 @@ def web_node(state: AgentState, config: RunnableConfig) -> AgentState:
         }
 
     print(f"Web search query: {query}")
-    snippets = web_search_tool.invoke(query)
+    snippets = web_search_tool.invoke(query)  # type: ignore
 
     if snippets.startswith("WEB_ERROR::"):
         print(f"Web Error: {snippets}. Proceeding to answer with limited info.")
@@ -255,17 +312,23 @@ def web_node(state: AgentState, config: RunnableConfig) -> AgentState:
 
 # --- Node 4: final answer ---
 def answer_node(state: AgentState) -> AgentState:
+    answer_llm = _get_answer_llm()
     user_q = next(
-        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)),
+        (
+            m.content
+            for m in reversed(state.get("messages", []))
+            if isinstance(m, HumanMessage)
+        ),
         "",
     )
 
     ctx_parts = []
     if state.get("rag"):
-        ctx_parts.append("Knowledge Base Information:\n" + state["rag"])
+        ctx_parts.append("Knowledge Base Information:\n" + state.get("rag", ""))
     if state.get("web"):
-        if state["web"] and not state["web"].startswith("Web search was disabled"):
-            ctx_parts.append("Web Search Results:\n" + state["web"])
+        web_content = state.get("web", "")
+        if web_content and not web_content.startswith("Web search was disabled"):
+            ctx_parts.append("Web Search Results:\n" + web_content)
 
     context = "\n\n".join(ctx_parts)
     if not context.strip():
@@ -282,15 +345,16 @@ Context:
 Provide a helpful, accurate, and concise response based on the available information."""
 
     ans = answer_llm.invoke([HumanMessage(content=prompt)]).content
-    return {**state, "messages": state["messages"] + [AIMessage(content=ans)]}
+    return {**state, "messages": state.get("messages", []) + [AIMessage(content=ans)]}
 
 
 def from_router(st: AgentState) -> Literal["rag", "web", "answer", "end"]:
-    return st["route"]
+    return st.get("route", "answer")  # type: ignore
 
 
 def after_rag(st: AgentState) -> Literal["answer", "web"]:
-    return st["route"]
+    route = st.get("route", "answer")
+    return route if route in ("answer", "web") else "answer"  # type: ignore
 
 
 def after_web(_) -> Literal["answer"]:
