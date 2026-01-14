@@ -8,6 +8,12 @@ MedAgent-Heart is an intelligent RAG (Retrieval Augmented Generation) chatbot th
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
+## 🌐 Live Demo
+
+- **🖥️ Web App**: [https://cardiogpt.streamlit.app/](https://cardiogpt.streamlit.app/)
+- **🔧 API Backend**: [https://cardiogpt-c4m8.onrender.com](https://cardiogpt-c4m8.onrender.com)
+- **📖 API Docs**: [https://cardiogpt-c4m8.onrender.com/docs](https://cardiogpt-c4m8.onrender.com/docs)
+
 ## ✨ Features
 
 - 🤖 **Intelligent Agent System** - LangGraph-powered decision-making workflow
@@ -60,7 +66,7 @@ MedAgent-Heart is an intelligent RAG (Retrieval Augmented Generation) chatbot th
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/angad2803/MedAgent-Heart.git
+   git clone https://github.com/SuryaKTiwari11/MedAgent-Heart.git
    cd MedAgent-Heart
    ```
 
@@ -133,52 +139,6 @@ MedAgent-Heart/
 ├── quick_test.py             # Quick functionality test
 ├── final_test.py             # Comprehensive test suite
 └── README.md                 # This file
-```
-
-## 🎨 Color Palette
-
-The application uses a custom Tailwind-inspired color scheme:
-
-- **Charcoal** (#17191c - #2f3137) - Dark backgrounds
-- **Electric Aqua** (#00eaff) - Primary accent, headers, highlights
-- **Burnt Peach** (#f73c08) - Error states
-- **Tuscan Sun** (#f7b708) - Warning states
-- **Soft Blush** (#ff0000) - Critical alerts
-
-## 🧪 Testing
-
-### Run API Tests
-
-```bash
-# Quick test
-python quick_test.py
-
-# Full test suite
-python final_test.py
-
-# Upload test
-python test_upload.py
-```
-
-### Test Endpoints Manually
-
-**Chat Endpoint:**
-
-```bash
-curl -X POST http://localhost:8000/chat/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "session_id": "test-001",
-    "query": "What are the treatments for heart disease?",
-    "enable_web_search": true
-  }'
-```
-
-**Upload Document:**
-
-```bash
-curl -X POST http://localhost:8000/upload-document/ \
-  -F "file=@dataForRag/heart_dieasespdf.pdf"
 ```
 
 ## 📚 API Documentation
@@ -287,10 +247,10 @@ MedAgent-Heart is an educational and informational tool. It should **not** be us
 ## 📧 Contact
 
 - **Author:** Angad — [@angad2803](https://github.com/angad2803)
-- **Repository:** [angad2803/MedAgent-Heart](https://github.com/angad2803/MedAgent-Heart)
+- **Repository:** [SuryaKTiwari11/MedAgent-Heart](https://github.com/SuryaKTiwari11/MedAgent-Heart)
 - **Contributors:** Surya Kant Tiwari — [@SuryaKTiwari11](https://github.com/SuryaKTiwari11)
 
-Have feedback or found an issue? Please open an issue or submit a pull request on the repository: https://github.com/angad2803/MedAgent-Heart/issues
+Have feedback or found an issue? Please open an issue or submit a pull request on the repository: https://github.com/SuryaKTiwari11/MedAgent-Heart/issues
 
 License: MIT
 </br>
