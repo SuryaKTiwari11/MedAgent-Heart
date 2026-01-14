@@ -127,7 +127,7 @@ async def chat_with_agent(request: QueryRequest):
     try:
         # Lazy import to avoid initialization errors at startup
         from agent import rag_agent
-        
+
         # Pass enable_web_search into the config for the agent to access
         config = {
             "configurable": {
