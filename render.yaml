@@ -1,26 +1,16 @@
 services:
   - type: web
-<<<<<<< HEAD
     name: medagent-backend
     env: python
+    rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
-=======
-    name: medagent-heart-backend
-    runtime: python
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.9
       - key: PINECONE_API_KEY
         sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: TAVILY_API_KEY
         sync: false
-    healthCheckPath: /health
->>>>>>> f3608250f2d9a35ab30b30e75e2ca706c3f70410
