@@ -14,11 +14,14 @@ print("=" * 60)
 from fastapi import FastAPI, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from langchain_core.messages import HumanMessage, AIMessage
-from langgraph.checkpoint.memory import MemorySaver
-from langchain_community.document_loaders import PyPDFLoader
 
-print("✓ Core imports successful")
+# Defer heavy/optional imports to runtime to avoid import-time crashes on startup
+# Provide placeholders that will be replaced if the optional packages are available.
+HumanMessage = None
+AIMessage = None
+memory = None
+
+print("✓ Core imports successful (heavy deps deferred)")
 
 # Lazy import - only import when needed to avoid startup failures
 # from agent import rag_agent
@@ -48,8 +51,9 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-# In-memory session manager for LangGraph checkpoints (for demonstration)
-memory = MemorySaver()
+# In-memory session manager placeholder for LangGraph checkpoints (deferred)
+# Actual `MemorySaver` will be instantiated lazily if available at runtime.
+memory = None
 
 
 # Startup event logs readiness (do not preload heavy models to avoid timeouts)
@@ -118,6 +122,18 @@ async def upload_document(file: UploadFile = File(...)):
         # Lazy import to avoid HuggingFace downloads during server startup
         from vectorstore import add_document_to_vectorstore
 
+        try:
+            from langchain_community.document_loaders import PyPDFLoader
+        except Exception as ie:
+            print(f"PDF loader import failed: {ie}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=(
+                    "PDF processing dependencies are missing. Install optional "
+                    "requirements to enable PDF uploads."
+                ),
+            )
+
         loader = PyPDFLoader(temp_file_path)
         documents = loader.load()
 
@@ -153,6 +169,24 @@ async def chat_with_agent(request: QueryRequest):
         # Lazy import to avoid initialization errors at startup
         from agent import rag_agent
 
+        # Try to import langchain message types and checkpoint memory lazily.
+        try:
+            from langchain_core.messages import HumanMessage, AIMessage
+        except Exception:
+            HumanMessage = None
+            AIMessage = None
+
+        try:
+            from langgraph.checkpoint.memory import MemorySaver
+
+            # instantiate memory if available (non-fatal)
+            global memory
+            if memory is None:
+                memory = MemorySaver()
+        except Exception:
+            # Memory saver optional; continue without it
+            pass
+
         # Pass enable_web_search into the config for the agent to access
         config = {
             "configurable": {
@@ -160,7 +194,11 @@ async def chat_with_agent(request: QueryRequest):
                 "web_search_enabled": request.enable_web_search,
             }
         }
-        inputs = {"messages": [HumanMessage(content=request.query)]}
+        # Build inputs; if HumanMessage type is unavailable, fall back to simple dict
+        if HumanMessage is not None:
+            inputs = {"messages": [HumanMessage(content=request.query)]}
+        else:
+            inputs = {"messages": [{"type": "human", "content": request.query}]}
 
         final_message = ""
         s = None  # Initialize to avoid unbound variable
@@ -264,9 +302,19 @@ async def chat_with_agent(request: QueryRequest):
 
         if final_actual_state_dict and "messages" in final_actual_state_dict:
             for msg in reversed(final_actual_state_dict["messages"]):
-                if isinstance(msg, AIMessage):
-                    final_message = str(msg.content)  # Ensure string type
-                    break
+                try:
+                    if AIMessage is not None and isinstance(msg, AIMessage):
+                        final_message = str(msg.content)
+                        break
+                    # Fallback: message may be a dict or object with 'content'
+                    if isinstance(msg, dict) and "content" in msg:
+                        final_message = str(msg["content"])
+                        break
+                    if hasattr(msg, "content"):
+                        final_message = str(getattr(msg, "content"))
+                        break
+                except Exception:
+                    continue
 
         if not final_message:
             print(

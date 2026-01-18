@@ -1,10 +1,15 @@
 import os
-from dotenv import load_dotenv
 
-# Load .env only if it exists (won't crash if missing on Render)
+# Import dotenv only if available; absence should not crash the app.
 try:
-    load_dotenv()
+    from dotenv import load_dotenv
+
+    try:
+        load_dotenv()
+    except Exception:
+        pass
 except Exception:
+    # dotenv is optional in deployed environments
     pass
 
 # Pinecone
