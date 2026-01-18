@@ -3,16 +3,13 @@ services:
     name: medagent-heart-backend
     runtime: python
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    # Keep working directory inside `backend` so uvicorn loads backend/main.py
-    # and relative paths behave as before. Ensure $PORT is used (no hardcode).
     startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.9
+        value: 3.11
       - key: PINECONE_API_KEY
         sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: TAVILY_API_KEY
         sync: false
-    healthCheckPath: /health
